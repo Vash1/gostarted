@@ -1,0 +1,41 @@
+version: "3.7"
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  postgresql:
+    image: 'bitnami/postgresql:latest'
+    ports:
+      - "65432:5432"
+    environment:
+      - POSTGRESQL_USER=postgres
+      - POSTGRESQL_DATABASE=postgres
+      - POSTGRESQL_PASSWORD=password
+    networks:
+      - app-tier
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  gotest:
+    build:
+      dockerfile: .ci/docker/Dockerfile
+      context: .
+    image: gotest:latest
+    volumes:
+      - "./source/:/app/"
+    environment:
+      - PGHOST=postgresql
+      - PGUSER=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=password
+
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    networks:
+      - app-tier
